@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 # Copyright 2017 The TensorFlow Authors. All Rights Reserved.
-=======
-#Copyright 2017 The TensorFlow Authors. All Rights Reserved.
->>>>>>> eee0a52206f73fb195515d9d4dc9197b1d25b109
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,19 +28,28 @@ from official.utils.flags import core as flags_core
 from official.utils.logs import logger
 from official.resnet import resnet_model
 from official.resnet import resnet_run_loop
-<<<<<<< HEAD
-import time
-
-## cluster specification
-parameter_servers = ["192.168.27.80:2221"]
-workers = ["192.168.27.80:2222", "192.168.27.81:2222","192.168.27.82:2222"]
-cluster = tf.train.ClusterSpec({"ps":parameter_servers, "worker":workers})
-=======
 
 import sys
 import time
 from tensorflow.python.client import timeline
->>>>>>> eee0a52206f73fb195515d9d4dc9197b1d25b109
+
+# cluster specification
+parameter_servers = ["192.168.27.80:2222"]
+#workers = ["localhost:2221", "localhost:2222","localhost:2223"]
+workers = ["192.168.27.81:2222","192.168.27.82:2222"]
+cluster = tf.train.ClusterSpec({"ps":parameter_servers, "worker":workers})
+
+# input flags
+tf.app.flags.DEFINE_string("job_name", "", "Either 'ps' or 'worker'")
+tf.app.flags.DEFINE_integer("task_index", 0, "Index of task within the job")
+FLAGS = tf.app.flags.FLAGS
+
+# start a server for a specific task
+server = tf.train.Server(
+    cluster,
+    job_name=FLAGS.job_name,
+    task_index=FLAGS.task_index)
+
 
 
 _HEIGHT = 32
@@ -58,8 +63,8 @@ _NUM_DATA_FILES = 5
 
 # TODO(tobyboyd): Change to best practice 45K(train)/5K(val)/10K(test) splits.
 _NUM_IMAGES = {
-    'train': 5,
-    'validation': 1,
+    'train': 5000,
+    'validation': 1000,
 }
 
 DATASET_NAME = 'CIFAR-10'
@@ -248,29 +253,17 @@ def cifar10_model_fn(features, labels, mode, params):
       dtype=params['dtype'],
       fine_tune=params['fine_tune']
   )
-<<<<<<< HEAD
-          
-def define_cifar_flags():
-  ## input flags
-  flags.DEFINE_string("job_name", "", "Either 'ps' or 'worker'")
-  flags.DEFINE_integer("task_index", 0, "Index of task within the job")
-  FLAGS = flags.FLAGS
-
-  resnet_run_loop.define_resnet_flags()
-  
-=======
 
 
 def define_cifar_flags():
   resnet_run_loop.define_resnet_flags()
->>>>>>> eee0a52206f73fb195515d9d4dc9197b1d25b109
   flags.adopt_module_key_flags(resnet_run_loop)
   flags_core.set_defaults(data_dir='/tmp/cifar10_data',
                           model_dir='/tmp/cifar10_model',
-                          resnet_size='8',
-                          train_epochs=1,
-                          epochs_between_evals=1,
-                          batch_size=1,
+                          resnet_size='56',
+                          train_epochs=182,
+                          epochs_between_evals=10,
+                          batch_size=128,
                           image_bytes_as_serving_input=False)
 
 
@@ -284,41 +277,6 @@ def run_cifar(flags_obj):
     tf.logging.fatal('--image_bytes_as_serving_input cannot be set to True '
                      'for CIFAR. This flag is only applicable to ImageNet.')
     return
-<<<<<<< HEAD
-## start a server for a specific task
-  server = tf.train.Server(cluster,job_name=flags_obj.job_name,task_index=flags_obj.task_index)
-
-#  input_function = (flags_obj.use_synthetic_data and get_synth_input_fn(flags_core.get_tf_dtype(flags_obj)) orinput_fn)
-  if flags_obj.job_name == "ps":
-    server.join()
-  elif flags_obj.job_name == "worker":
-    ## Between-graph replication
-    with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d" % flags_obj.task_index, cluster=cluster)):
-    ## count the number of updates
-      global_step = tf.get_variable('global_step',[],initializer = tf.constant_initializer(0),trainable = False)
-
-      input_function = (flags_obj.use_synthetic_data and get_synth_input_fn(flags_core.get_tf_dtype(flags_obj)) or input_fn)
-
-      # run training
-      resnet_run_loop.resnet_main(flags_obj, cifar10_model_fn, input_function, DATASET_NAME,shape=[_HEIGHT, _WIDTH, _NUM_CHANNELS])
-
-def main(_):
-  # create options to profile time/memory as well as parameters
-  builder = tf.profiler.ProfileOptionBuilder
-  opts = builder(builder.time_and_memory()).order_by('micros').build()
-  opts2 = tf.profiler.ProfileOptionBuilder.trainable_variables_parameter()
-
-  with logger.benchmark_context(flags.FLAGS):
-    with tf.contrib.tfprof.ProfileContext('./') as pctx:
-      print("\n run_cifar")
-      run_cifar(flags.FLAGS)
-
-
-if __name__ == '__main__':
-  tf.logging.set_verbosity(tf.logging.INFO)
-  define_cifar_flags()
-  absl_app.run(main)
-=======
 
   input_function = (flags_obj.use_synthetic_data and
                     get_synth_input_fn(flags_core.get_tf_dtype(flags_obj)) or
@@ -334,9 +292,6 @@ def main(_):
 
 
 if __name__ == '__main__':
-	# cluster specification
-
-	tf.logging.set_verbosity(tf.logging.INFO)
-	define_cifar_flags()
-	absl_app.run(main)
->>>>>>> eee0a52206f73fb195515d9d4dc9197b1d25b109
+  tf.logging.set_verbosity(tf.logging.INFO)
+  define_cifar_flags()
+  absl_app.run(main)
